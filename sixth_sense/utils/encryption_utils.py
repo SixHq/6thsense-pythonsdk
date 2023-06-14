@@ -15,13 +15,10 @@ async def post_order_encrypt(public_key, key, data, copy_text, list_key=None):
                 new_deep_copy = copy.deepcopy(i)
                 await post_order_encrypt(public_key, None, i, new_deep_copy)
                 new_list.append(new_deep_copy)
+            elif type(i) == list:
+                await post_order_encrypt(public_key, key, i, copy_text, list_key)
             else:
                 new_list.append(await encrypt(public_key, str(i)+":::bob_::_johan::sixer"+str(type(i))))
-        if type(copy_text) == list:
-            copy_text.clear()
-            copy_text.extend(new_list)
-            return
-            
         del copy_text[list_key]
         copy_text.update({list_key:new_list})
         return
@@ -31,12 +28,16 @@ async def post_order_encrypt(public_key, key, data, copy_text, list_key=None):
     for i in data.keys():
         encrypted = await encrypt(public_key, i)
         copy_text[encrypted] = copy_text.pop(i)
-        if type(copy_text[encrypted])!= dict  and type(copy_text[encrypted]) != list :
-            copy_text[encrypted] = await encrypt(public_key, str(copy_text[encrypted])+":::bob_::_johan::sixer"+str(type(copy_text[encrypted])))
+        if type(copy_text[encrypted]) == str or type(copy_text[encrypted])==int or type(copy_text[encrypted])==float or type(copy_text[encrypted])==bool:
+            if (len(str(copy_text[encrypted]))) < 40:
+                copy_text[encrypted] = await encrypt(public_key, str(copy_text[encrypted])+":::bob_::_johan::sixer"+str(type(copy_text[encrypted])))
+            else:
+                copy_text[encrypted] = str(copy_text[encrypted])
         elif type(copy_text[encrypted]) == list:
             await post_order_encrypt(public_key, i, data[i],copy_text, encrypted)
         else:
             await post_order_encrypt(public_key, i, data[i],copy_text[encrypted])
+                                          
 
 async def post_order_decrypt(private_key, key, data, copy_text, list_key=None):   
     if type(data) == list:
@@ -46,27 +47,28 @@ async def post_order_decrypt(private_key, key, data, copy_text, list_key=None):
                 new_deep_copy = copy.deepcopy(i)
                 await post_order_decrypt(private_key, None, i, new_deep_copy)
                 new_list.append(new_deep_copy)
-            else:
-                new_list.append(await parse_word(await decrypt(private_key, private_key, i)))
-
-        if type(copy_text) == list:
-            copy_text.clear()
-            copy_text.extend(new_list)
-            return
                 
+            elif type(i) == list:
+                await post_order_decrypt(private_key, key, i, copy_text, list_key)
+                
+            else:
+                new_list.append(await parse_word(await decrypt(private_key, i)))
         del copy_text[list_key]
         copy_text.update({list_key:new_list})
         return
     if type(data) != dict:
-        copy_text[await decrypt(private_key,key)] = await decrypt(str(private_key,data))
+        copy_text[await decrypt(private_key, key)] = await decrypt(private_key, str(data))
         
     for i in data.keys():
         encrypted = await decrypt(private_key, i)
         copy_text[encrypted] = copy_text.pop(i)
-        if type(copy_text[encrypted])!= dict  and type(copy_text[encrypted]) != list :
-            copy_text[encrypted] =await parse_word(await decrypt(private_key, str(copy_text[encrypted])))
+        if type(copy_text[encrypted]) == str or type(copy_text[encrypted])==int or type(copy_text[encrypted])==float:
+            try:
+                copy_text[encrypted] = await parse_word(await decrypt(private_key, str(copy_text[encrypted])))  
+            except:
+                copy_text[encrypted] = str(copy_text[encrypted])
         elif type(copy_text[encrypted]) == list:
-            await post_order_decrypt(private_key,i, data[i],copy_text, encrypted)
+            await post_order_decrypt(private_key, i, data[i],copy_text, encrypted)
         else:
             await post_order_decrypt(private_key, i, data[i],copy_text[encrypted])
 

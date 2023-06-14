@@ -1,4 +1,4 @@
-from pydantic import BaseModel,validator,EmailStr
+from pydantic import BaseModel
 from typing import List, Optional, Dict
 
 
@@ -23,5 +23,7 @@ class ProjectConfig(BaseModel):
     rate_limiter: Dict[str, RateLimiter]
     encryption: Encryption
     base_url: str 
+    encryption_enabled: bool
+    rate_limiter_enabled: bool
     last_updated: float
     created_at: float

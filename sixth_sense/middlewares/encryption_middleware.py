@@ -7,11 +7,11 @@ import ast
 from dotenv import load_dotenv
 import os
 import requests
-from utils import encryption_utils
+from sixth_sense.utils import encryption_utils
 import copy
 import json
 from fastapi import Response, Header
-from src.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware
+from sixth_sense.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware
 from fastapi import HTTPException
 load_dotenv()
 
@@ -57,11 +57,11 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
                 output = json.dumps(output)
                 headers = dict(request.headers)
                 headers["content-length"]= str(len(output.encode()))
-            except:
-                raise HTTPException(401, {"Unauthorized":"Unauthorized"})
+            except Exception as e:
+                raise HTTPException(401, {"Unauthorized":e})
             
 
-        response = await call_next(200, output, headers, {})
+        response = await call_next(200, output, headers)
         resp_body = response.body
         resp_body = await self._parse_bools(resp_body)
         public_key_request = requests.post("https://backend.withsix.co/encryption-service/get-user-public-key", data=json.dumps({
@@ -85,5 +85,5 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
                     background=response.background
                 )
                 
-            except:
-                raise HTTPException(401, {"Unauthorized":"Unauthorized"})
+            except Exception as e:
+                raise HTTPException(401, {"Unauthorized":e})

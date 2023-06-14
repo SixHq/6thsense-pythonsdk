@@ -1,22 +1,16 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
-from starlette.datastructures import Headers, MutableHeaders
-from starlette.responses import PlainTextResponse, Response
-from starlette.types import ASGIApp, Message, Receive, Scope, Send
-from fastapi import FastAPI,Depends,Response,HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware import Middleware
+from starlette.types import ASGIApp, Message
+from fastapi import FastAPI,Response, Request
 import time
 import json
-from src import schemas
+from sixth_sense import schemas
 import re
 import requests
-from dotenv import load_dotenv
-import os
 import ast
 
 
-class SixRateLimiterMiddleware(BaseHTTPMiddleware):
+class SixRateIndependentLimiterMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp, apikey: str, fastapi_app: FastAPI, project_config: schemas.ProjectConfig):
         super().__init__(app)
         self._config = project_config
@@ -63,6 +57,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         return out
         
     async def dispatch(self,request: Request,call_next) -> None:
+        
         host = request.client.host
         route = request.scope["path"]
         route = re.sub(r'\W+', '~', route)
@@ -74,12 +69,14 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
 
         if rate_limit_resp.status_code == 200:
             rate_limit = schemas.RateLimiter.parse_obj(rate_limit_resp.json())
-            print(self._config," config is btw " ,rate_limit, route)
             self._config.rate_limiter[route] = rate_limit
             preferred_id = host if self._config.rate_limiter[route].unique_id == "" or self._config.rate_limiter[route].unique_id == "host" else body[self._config.rate_limiter[route].unique_id]
             _response = await call_next(request)
             if self._is_rate_limit_reached(preferred_id, route): 
-                return _response
+                body = await _response.body_iterator
+                await self.set_body(_response, body)
+                headers = _response.raw_headers
+                return Response(json.dumps(body), status_code=500, headers=headers)
             else:
                 output={
                     "message": "max request reached"
