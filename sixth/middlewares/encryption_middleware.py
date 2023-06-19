@@ -7,11 +7,11 @@ import ast
 from dotenv import load_dotenv
 import os
 import requests
-from sixth_sense.utils import encryption_utils
+from sixth.utils import encryption_utils
 import copy
 import json
 from fastapi import Response, Header
-from sixth_sense.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware
+from sixth.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware
 from fastapi import HTTPException
 load_dotenv()
 
@@ -42,7 +42,7 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
         req_body = await request.body()
         await self.set_body(request, req_body)
         req_body =await self._parse_bools(req_body)
-        private_key_request = requests.post("https://backend.withsix.co/encryption-service/get-user-private_key", data=json.dumps({
+        private_key_request = requests.post("http://127.0.0.1:8000/encryption-service/get-user-private_key", data=json.dumps({
             "apiKey": self._apikey
         }))
         if private_key_request.status_code == 200:
@@ -64,7 +64,7 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
         response = await call_next(200, output, headers)
         resp_body = response.body
         resp_body = await self._parse_bools(resp_body)
-        public_key_request = requests.post("https://backend.withsix.co/encryption-service/get-user-public-key", data=json.dumps({
+        public_key_request = requests.post("http://127.0.0.1:8000/encryption-service/get-user-public-key", data=json.dumps({
             "apiKey": self._apikey
         }))
         if public_key_request.status_code == 200:

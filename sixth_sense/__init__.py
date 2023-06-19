@@ -1,1 +1,0 @@
-from sixth_sense.sixth_sense import SixthSense

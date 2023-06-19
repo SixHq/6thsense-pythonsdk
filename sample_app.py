@@ -1,6 +1,6 @@
 from fastapi import FastAPI,Depends,Response,HTTPException, Request
 import uvicorn
-from sixth_sense.sixth_sense import SixthSense
+from sixth.sdk import SixthSense
 import json
 import time
 from typing import Optional, Dict, Union, Type, Callable
@@ -41,7 +41,7 @@ app = VersionedFastAPI(
         prefix_format="/v{major}"
 )
 
-SixthSense(apikey="4d512129ff7d5c53958d84e6c3be99f6", app=app).init()
+SixthSense(apikey="YVawS7tr1SaBmeG4NVZt3OniEw52", app=app).init()
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=5001)

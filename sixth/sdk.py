@@ -1,12 +1,12 @@
 from fastapi import FastAPI, status, Depends
-from sixth_sense.middlewares.six_rate_limiter_middleware import SixRateLimiterMiddleware
-from sixth_sense.middlewares.encryption_middleware import EncryptionMiddleware
-from sixth_sense.middlewares.six_independent_rate_limiter import SixRateIndependentLimiterMiddleware
+from sixth.middlewares.six_rate_limiter_middleware import SixRateLimiterMiddleware
+from sixth.middlewares.encryption_middleware import EncryptionMiddleware
+from sixth.middlewares.six_independent_rate_limiter import SixRateIndependentLimiterMiddleware
 import requests
 from dotenv import load_dotenv
-from sixth_sense import schemas
+from sixth import schemas
 import os
-from sixth_sense.utils.time_utils import get_time_now
+from sixth.utils.time_utils import get_time_now
 import json
 import re
 from pydantic.error_wrappers import ValidationError
@@ -20,7 +20,7 @@ class SixthSense():
         self._app = app 
 
     def init(self):
-        _base_url = "https://backend.withsix.co"
+        _base_url = "http://127.0.0.1:8000"
         _project_config_resp = requests.get(_base_url+"/project-config/config/"+self._apikey)
         # get the user's project config
         try:
@@ -72,13 +72,13 @@ class SixthSense():
             last_updated=get_time_now(), 
             created_at=get_time_now(), 
             encryption_enabled=config.encryption_enabled if config != None else False, 
-            rate_limiter_enabled=config.rate_limiter_enabled if config != None else False
+            rate_limiter_enabled=config.rate_limiter_enabled if config != None else True
         )
-        _base_url = "https://backend.withsix.co"
+        _base_url = "http://127.0.0.1:8000"
         _project_config_resp = requests.post(_base_url+"/project-config/config/sync-user-config", json=_config.dict())
         if _project_config_resp.status_code == status.HTTP_200_OK:
-            return True
+            return _config
         else: 
-            return False
+            return _config
 
 

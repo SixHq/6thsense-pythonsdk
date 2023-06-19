@@ -1,25 +1,38 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
-from starlette.types import ASGIApp, Message
-from fastapi import FastAPI,Response, Request
+from starlette.datastructures import Headers, MutableHeaders
+from starlette.responses import PlainTextResponse, Response
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
+from fastapi import FastAPI,Depends,Response,HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware import Middleware
 import time
 import json
-from sixth_sense import schemas
+from sixth import schemas
 import re
 import requests
+from dotenv import load_dotenv
+import os
 import ast
 
 
-class SixRateIndependentLimiterMiddleware(BaseHTTPMiddleware):
+class SixRateLimiterMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp, apikey: str, fastapi_app: FastAPI, project_config: schemas.ProjectConfig):
         super().__init__(app)
         self._config = project_config
         self._log_dict = {}
         self._app = app
         self._apikey = apikey
-        for route in fastapi_app.routes:
-            new_route = re.sub(r'\W+', '~', route.path)
-            self._log_dict[str(new_route)] = {}
+        for route in fastapi_app.router.routes:
+            if type(route.app )== FastAPI:
+                for new_route in route.app.routes:
+                    path = "/v"+str(route.app.version)+new_route.path
+                    edited_route = re.sub(r'\W+', '~', path)
+                    self._log_dict[str(edited_route)] = {}
+            else:
+                edited_route = re.sub(r'\W+', '~', route.path)
+                self._log_dict[str(edited_route)] = {}
+                
 
     async def set_body(self, request: Request, body: bytes):
         async def receive() -> Message:
@@ -57,30 +70,25 @@ class SixRateIndependentLimiterMiddleware(BaseHTTPMiddleware):
         return out
         
     async def dispatch(self,request: Request,call_next) -> None:
-        
         host = request.client.host
         route = request.scope["path"]
         route = re.sub(r'\W+', '~', route)
-        rate_limit_resp = requests.get("https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
-        body = await request.body()
-        await self.set_body(request, body)
-        body = await self._parse_bools(body)
-        
-
+        rate_limit_resp = requests.get("http://127.0.0.1:8000/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
         if rate_limit_resp.status_code == 200:
             rate_limit = schemas.RateLimiter.parse_obj(rate_limit_resp.json())
             self._config.rate_limiter[route] = rate_limit
-            preferred_id = host if self._config.rate_limiter[route].unique_id == "" or self._config.rate_limiter[route].unique_id == "host" else body[self._config.rate_limiter[route].unique_id]
+            preferred_id = host if self._config.rate_limiter[route].unique_id == "" or self._config.rate_limiter[route].unique_id == "host" else self._config.rate_limiter[route].unique_id
             _response = await call_next(request)
             if self._is_rate_limit_reached(preferred_id, route): 
-                body = await _response.body_iterator
-                await self.set_body(_response, body)
-                headers = _response.raw_headers
-                return Response(json.dumps(body), status_code=500, headers=headers)
+                return _response
             else:
-                output={
-                    "message": "max request reached"
-                }
+                temp_payload = rate_limit.error_payload.values()
+                final = {}
+                for c in temp_payload:
+                    for keys in c:
+                        if keys != "uid":
+                            final[keys] = c[keys]
+                output= final
                 _response.headers["content-length"]= str(len(str(output).encode()))
                 return Response(json.dumps(output), status_code=401, headers=_response.headers)
         else:
