@@ -73,7 +73,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         host = request.client.host
         route = request.scope["path"]
         route = re.sub(r'\W+', '~', route)
-        rate_limit_resp = requests.get("http://127.0.0.1:8000/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
+        rate_limit_resp = requests.get("https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
         if rate_limit_resp.status_code == 200:
             rate_limit = schemas.RateLimiter.parse_obj(rate_limit_resp.json())
             self._config.rate_limiter[route] = rate_limit

@@ -41,7 +41,7 @@ app = VersionedFastAPI(
         prefix_format="/v{major}"
 )
 
-SixthSense(apikey="YVawS7tr1SaBmeG4NVZt3OniEw52", app=app).init()
+SixthSense(apikey="ec0b242c99f5b9fcf1aa78c755f49b91", app=app).init()
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=5001)
+    uvicorn.run(app, host="127.0.0.1", port=5002)

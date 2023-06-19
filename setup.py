@@ -4,15 +4,15 @@ from pip._internal.req import parse_requirements
 
 
 
-VERSION = '0.0.5'
-DESCRIPTION = 'Six offical python ackage'
+VERSION = '0.0.6'
+DESCRIPTION = 'Six offical python package'
 LONG_DESCRIPTION = '''
 # **Sixth**
 
 
 [![N|Solid](https://firebasestorage.googleapis.com/v0/b/test-103bf.appspot.com/o/waves.png?alt=media&token=0fa4c489-d9c9-4a3b-9178-593b2b018613)](https://nodesource.com/products/nsolid)
 
-Six helps you proactively identify security vulnerabilities and prevent cyberattacks on your system that could cost you millions of dollars.
+Sixth helps you proactively identify security vulnerabilities and prevent cyberattacks on your system that could cost you millions of dollars.
 
 
 

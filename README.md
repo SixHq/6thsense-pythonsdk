@@ -32,7 +32,7 @@ pip install six-python
 #### _usage_
 ```python
 #import sixth SDK
-from sixth_sense.sixth_sense import SixthSense
+from sixth.sdk import SixthSense
 from fastapi import FastAPI
 
 app = FastAPI()

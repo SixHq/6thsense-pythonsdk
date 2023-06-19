@@ -20,7 +20,7 @@ class SixthSense():
         self._app = app 
 
     def init(self):
-        _base_url = "http://127.0.0.1:8000"
+        _base_url = "https://backend.withsix.co"
         _project_config_resp = requests.get(_base_url+"/project-config/config/"+self._apikey)
         # get the user's project config
         try:
@@ -74,7 +74,7 @@ class SixthSense():
             encryption_enabled=config.encryption_enabled if config != None else False, 
             rate_limiter_enabled=config.rate_limiter_enabled if config != None else True
         )
-        _base_url = "http://127.0.0.1:8000"
+        _base_url = "https://backend.withsix.co"
         _project_config_resp = requests.post(_base_url+"/project-config/config/sync-user-config", json=_config.dict())
         if _project_config_resp.status_code == status.HTTP_200_OK:
             return _config
