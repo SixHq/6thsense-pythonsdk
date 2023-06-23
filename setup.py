@@ -4,7 +4,7 @@ from pip._internal.req import parse_requirements
 
 
 
-VERSION = '0.0.6'
+VERSION = '0.0.8'
 DESCRIPTION = 'Six offical python package'
 LONG_DESCRIPTION = '''
 # **Sixth**
@@ -35,7 +35,7 @@ Sixth SDK is currently only available for [fasiapi](https://fastapi.tiangolo.com
 #### _Installation_
 
 ```sh
-pip install six-python
+pip install sixth-python
 ```
 
 #### _usage_
@@ -49,7 +49,7 @@ app = FastAPI()
 
 
 #....
-SixthSense(apikey="api key", app=app).init()
+Sixth(apikey="api key", app=app).init()
 if __name__ == "__main__":
     uvicorn.run(app, host=host, port=PORT)
 

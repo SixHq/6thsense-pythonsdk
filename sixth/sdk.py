@@ -14,7 +14,7 @@ from pydantic.error_wrappers import ValidationError
 load_dotenv()
 
 
-class SixthSense():
+class Sixth():
     def __init__(self, apikey: str, app: FastAPI):
         self._apikey = apikey
         self._app = app 

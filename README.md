@@ -32,7 +32,7 @@ pip install six-python
 #### _usage_
 ```python
 #import sixth SDK
-from sixth.sdk import SixthSense
+from sixth.sdk import Sixth
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -40,7 +40,7 @@ app = FastAPI()
 
 
 #....
-SixthSense(apikey="api key", app=app).init()
+Sixth(apikey="api key", app=app).init()
 if __name__ == "__main__":
     uvicorn.run(app, host=host, port=PORT)
 
