@@ -1,6 +1,5 @@
 from fastapi import FastAPI,Depends,Response,HTTPException, Request
 import uvicorn
-from sixth.sdk import SixthSense
 import json
 import time
 from typing import Optional, Dict, Union, Type, Callable
@@ -50,6 +49,7 @@ async def new(request:Request):
 @app.post("/tessting")
 @version(1)
 async def news(request: Request, schema:TestSchema):
+    time.sleep(10)
     body = schema.dict()
     return body
 
@@ -60,6 +60,6 @@ async def cors(request: Request):
 
 
 
-Sixth("apikey", app).init()
+Sixth("4d512129ff7d5c53958d84e6c3be99f6", app).init()
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=PORT)

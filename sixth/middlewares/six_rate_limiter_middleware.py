@@ -6,6 +6,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from fastapi import FastAPI,Depends,Response,HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware import Middleware
+from starlette.datastructures import MutableHeaders
 import time
 import json
 from sixth import schemas
@@ -85,8 +86,9 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                     self._config.rate_limiter[route] = rate_limit
                     preferred_id = host if self._config.rate_limiter[route].unique_id == "" or self._config.rate_limiter[route].unique_id == "host" else body[self._config.rate_limiter[route].unique_id]
                     print("preferred id is ", preferred_id)
-                    _response = await call_next(request)
                     if self._is_rate_limit_reached(preferred_id, route): 
+                        _response = await call_next(request)
+                        print(_response.headers)
                         return _response
                     else:
                         temp_payload = rate_limit.error_payload.values()
@@ -96,8 +98,8 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                                 if keys != "uid":
                                     final[keys] = c[keys]
                         output= final
-                        _response.headers["content-length"]= str(len(str(output).encode()))
-                        return Response(json.dumps(output), status_code=401, headers=_response.headers)
+                        headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
+                        return Response(json.dumps(output), status_code=401, headers=headers)
                 except:
                     _response = await call_next(request)
                     return _response

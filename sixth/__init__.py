@@ -1,1 +1,1 @@
-from sixth.sdk import SixthSense
+from sixth.sdk import Sixth
