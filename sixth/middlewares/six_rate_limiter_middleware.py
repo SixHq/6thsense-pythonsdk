@@ -82,7 +82,6 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
 
             try:
                 body = await request.body()
-                
                 await self.set_body(request, body)
                 body = await self._parse_bools(body)
             except:
