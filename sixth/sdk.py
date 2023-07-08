@@ -52,7 +52,7 @@ class Sixth():
                         _rl_configs[edited_route] = config.rate_limiter[edited_route]
                         continue
                     #set the default values
-                    _rl_config = schemas.RateLimiter(id = edited_route, route=edited_route, interval=60, rate_limit=10, last_updated=get_time_now(), created_at=get_time_now(), unique_id="host")
+                    _rl_config = schemas.RateLimiter(id = edited_route, route=edited_route, interval=60, rate_limit=10, last_updated=get_time_now(), created_at=get_time_now(), unique_id="host", rate_limit_type="ip address")
                     _rl_configs[edited_route] = _rl_config
             else:
                 edited_route = re.sub(r'\W+', '~', route.path)

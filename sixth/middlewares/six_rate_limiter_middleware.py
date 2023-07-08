@@ -74,21 +74,44 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         host = request.client.host
         route = request.scope["path"]
         route = re.sub(r'\W+', '~', route)
+        headers = request.headers
         #fail safe if there is an internal server error our servers are currenly in maintnance
         try:
             rate_limit_resp = requests.get("https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
-            body = await request.body()
-            await self.set_body(request, body)
-            body = await self._parse_bools(body)
+            body = None
+
+            try:
+                body = await request.body()
+                
+                await self.set_body(request, body)
+                body = await self._parse_bools(body)
+            except:
+                pass
+           
             if rate_limit_resp.status_code == 200:
                 try:
                     rate_limit = schemas.RateLimiter.parse_obj(rate_limit_resp.json())
                     self._config.rate_limiter[route] = rate_limit
-                    preferred_id = host if self._config.rate_limiter[route].unique_id == "" or self._config.rate_limiter[route].unique_id == "host" else body[self._config.rate_limiter[route].unique_id]
-                    print("preferred id is ", preferred_id)
+                    preferred_id = self._config.rate_limiter[route].unique_id
+                   
+                    if preferred_id == "" or preferred_id=="host":
+                        preferred_id = host
+                        
+                    else:
+                        if rate_limit.rate_limit_type == "body":
+                            if body != None:
+                                preferred_id = body[preferred_id]
+                            else:
+                                _response = await call_next(request)
+                                return _response
+                        elif rate_limit.rate_limit_type == "header":
+                            preferred_id = headers[preferred_id]
+                        else:
+                            preferred_id = host
+                    
+
                     if self._is_rate_limit_reached(preferred_id, route): 
                         _response = await call_next(request)
-                        print(_response.headers)
                         return _response
                     else:
                         temp_payload = rate_limit.error_payload.values()
@@ -100,13 +123,13 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                         output= final
                         headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
                         return Response(json.dumps(output), status_code=401, headers=headers)
-                except:
+                except Exception as e:
                     _response = await call_next(request)
                     return _response
             else:
                 #fail safe if there is an internal server error our servers are currenly in maintnance
                 _response = await call_next(request)
                 return _response
-        except:
+        except Exception as e:
             _response = await call_next(request)
             return _response

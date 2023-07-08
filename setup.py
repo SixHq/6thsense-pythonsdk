@@ -4,7 +4,7 @@ from pip._internal.req import parse_requirements
 
 
 
-VERSION = '0.0.9'
+VERSION = '0.1.1'
 DESCRIPTION = 'Six offical python package'
 LONG_DESCRIPTION = '''
 # **Sixth**

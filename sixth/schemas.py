@@ -4,13 +4,14 @@ import uuid
 
 
 class RateLimiter(BaseModel): 
-    error_payload_id = str(uuid.uuid4())
+    error_payload_id: str = str(uuid.uuid4())
     id: str
     route: str
     interval: int 
     rate_limit: int
     last_updated: float 
     created_at: float
+    rate_limit_type: str = "ip address" #ip address, header, body
     unique_id: str = "host"
     error_payload: Dict[str , dict] = {
         error_payload_id:{

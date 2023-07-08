@@ -12,14 +12,9 @@ from pyngrok import ngrok
 from sixth.sdk import Sixth
 import uuid
 from pydantic import BaseModel
-public_url = ngrok.connect(9126).public_url
-print(public_url)
 
 app=FastAPI()
 
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 def version_app(
     app: FastAPI,
@@ -41,25 +36,17 @@ class TestSchema(BaseModel):
 
 PORT = 5001
 
-@app.get("/")
+@app.get("/ope")
 @version(1)
 async def new(request:Request):
     return request.headers
 
-@app.post("/tessting")
+@app.post("/testing")
 @version(1)
 async def news(request: Request, schema:TestSchema):
-    time.sleep(10)
     body = schema.dict()
     return body
 
-@app.get("/new", response_class=HTMLResponse)
-async def cors(request: Request):
-    print(uuid.uuid4())
-    return templates.TemplateResponse("index.html", {"request": request})
-
-
-
-Sixth("4d512129ff7d5c53958d84e6c3be99f6", app).init()
+Sixth("YVawS7tr1SaBmeG4NVZt3OniEw52", app).init()
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=PORT)
