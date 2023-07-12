@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 import uuid
 
 
@@ -7,11 +7,11 @@ class RateLimiter(BaseModel):
     error_payload_id: str = str(uuid.uuid4())
     id: str
     route: str
-    interval: int 
+    interval: Union[float, int, str]
     rate_limit: int
     last_updated: float 
     created_at: float
-    rate_limit_type: str = "ip address" #ip address, header, body
+    rate_limit_type: str = "ip address" #ip address, header, body, query_param
     unique_id: str = "host"
     error_payload: Dict[str , dict] = {
         error_payload_id:{
@@ -19,6 +19,7 @@ class RateLimiter(BaseModel):
             "uid": error_payload_id
         }
     }
+    is_active:bool
 
 class Encryption(BaseModel):
     public_key: str 
@@ -36,3 +37,14 @@ class ProjectConfig(BaseModel):
     rate_limiter_enabled: bool
     last_updated: float
     created_at: float
+
+class SlackMessageSchema(BaseModel):
+    header:dict
+    user_id:str
+    body:object
+    query_args: object = None
+    timestamp: float 
+    attack_type: str
+    cwe_link: str
+    status: str 
+    learn_more_link: str    

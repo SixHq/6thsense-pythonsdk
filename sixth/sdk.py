@@ -52,7 +52,7 @@ class Sixth():
                         _rl_configs[edited_route] = config.rate_limiter[edited_route]
                         continue
                     #set the default values
-                    _rl_config = schemas.RateLimiter(id = edited_route, route=edited_route, interval=60, rate_limit=10, last_updated=get_time_now(), created_at=get_time_now(), unique_id="host", rate_limit_type="ip address")
+                    _rl_config = schemas.RateLimiter(id = edited_route, route=edited_route, interval=60, rate_limit=10, last_updated=get_time_now(), created_at=get_time_now(), unique_id="host", rate_limit_type="ip address", is_active=False)
                     _rl_configs[edited_route] = _rl_config
             else:
                 edited_route = re.sub(r'\W+', '~', route.path)
@@ -61,14 +61,14 @@ class Sixth():
                         _rl_configs[edited_route] = config.rate_limiter[edited_route]
                         continue
                     #set the default values
-                _rl_config = schemas.RateLimiter(id = edited_route, route=edited_route, interval=60, rate_limit=10, last_updated=get_time_now(), created_at=get_time_now(), unique_id="host")
+                _rl_config = schemas.RateLimiter(id = edited_route, route=edited_route, interval=60, rate_limit=10, last_updated=get_time_now(), created_at=get_time_now(), unique_id="host", is_active=False)
                 _rl_configs[edited_route] = _rl_config
 
         _config = schemas.ProjectConfig(
             user_id = self._apikey, 
             rate_limiter = _rl_configs, 
-            encryption = schemas.Encryption(public_key="dummy",private_key="dummy", use_count=0, last_updated=0,created_at=0), 
-            base_url = "op",
+            encryption = schemas.Encryption(public_key="dummy",private_key="dummy", use_count=0, last_updated=0,created_at=0, is_active=False), 
+            base_url = "project",
             last_updated=get_time_now(), 
             created_at=get_time_now(), 
             encryption_enabled=config.encryption_enabled if config != None else False, 

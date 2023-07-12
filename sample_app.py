@@ -38,15 +38,26 @@ PORT = 5001
 
 @app.get("/ope")
 @version(1)
-async def new(request:Request):
+async def new(name: str, request:Request):
     return request.headers
 
 @app.post("/testing")
 @version(1)
 async def news(request: Request, schema:TestSchema):
-    body = schema.dict()
+    body = schema.json()
     return body
 
-Sixth("YVawS7tr1SaBmeG4NVZt3OniEw52", app).init()
+@app.post("/users/resend_otp/")
+@version(1)
+async def news():
+    return {
+        "message": "otp sent successfully"
+    }
+
+@app.get("/items/{item_id}")
+def read_item(item_id: int):
+    return {"item_id": item_id}
+
+Sixth("4d512129ff7d5c53958d84e6c3be99f6", app).init()
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=PORT)

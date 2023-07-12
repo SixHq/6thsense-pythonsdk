@@ -4,8 +4,8 @@ from pip._internal.req import parse_requirements
 
 
 
-VERSION = '0.1.1'
-DESCRIPTION = 'Six offical python package'
+VERSION = '0.1.5'
+DESCRIPTION = 'Sixth offical python package'
 LONG_DESCRIPTION = '''
 # **Sixth**
 
@@ -41,7 +41,7 @@ pip install sixth-python
 #### _usage_
 ```python
 #import sixth SDK
-from sixth.sdk import SixthSense
+from sixth.sdk import Sixth
 from fastapi import FastAPI
 
 app = FastAPI()
@@ -66,12 +66,12 @@ npm i sixth-node
 
 #### _usage_
 ```js
-import SixthSense from "sixth-node";
+import Sixth from "sixth-node";
 import  express  from "express";
 
 const app = express();
 
-const six = new SixthSense("apikey", app)
+const six = new Sixth("apikey", app)
 await six.init()
 // add routes, middleware, exception handlers etc
 
