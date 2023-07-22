@@ -48,3 +48,4 @@ class SlackMessageSchema(BaseModel):
     cwe_link: str
     status: str 
     learn_more_link: str    
+    route: str

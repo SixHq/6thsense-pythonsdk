@@ -12,8 +12,7 @@ import json
 from sixth import schemas
 import re
 import requests
-from dotenv import load_dotenv
-import os
+import pickledb
 import ast
 
 
@@ -26,9 +25,10 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         self._apikey = apikey
         self._route_last_updated = {}
         self._rate_limit_logs_sent = {}
+        self.db = pickledb.load(f'{apikey}_db.db', auto_dump=True)
         
         for route in fastapi_app.router.routes:
-            if type(route.app )== FastAPI:
+            if type(route.app) == FastAPI:
                 for new_route in route.app.routes:
                     path = "/v"+str(route.app.version)+new_route.path
                     edited_route = re.sub(r'\W+', '~', path)
@@ -39,8 +39,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                 edited_route = re.sub(r'\W+', '~', route.path)
                 self._log_dict[str(edited_route)] = {}
                 self._route_last_updated[str(edited_route)] = time.time()
-                self._rate_limit_logs_sent[str(edited_route)] = 0
-                
+                self._rate_limit_logs_sent[str(edited_route)] = 0                
 
     async def set_body(self, request: Request, body: bytes):
         async def receive() -> Message:
@@ -48,22 +47,23 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         request._receive = receive
         
     def _is_rate_limit_reached(self, uid, route):
-        timestamp = time.time()
-        requests = self._log_dict[route].get(uid, None)
         rate_limit = self._config.rate_limiter[route].rate_limit
         interval = self._config.rate_limiter[route].interval
-        if requests == None:
-            self._log_dict[route][uid] = []
-        if len(self._log_dict[route].get(uid)) < rate_limit:
-            self._log_dict[route].get(uid, []).append(timestamp)
-            return True
-            
-        new_req = [new_req for new_req in self._log_dict[route][uid] if new_req > timestamp-interval]
-        if len(new_req) < rate_limit:
-            self._log_dict[route][uid].append(timestamp)
-            return True
-        else: 
+        body = {
+            "route": route, 
+            "interval": interval, 
+            "rate_limit": rate_limit, 
+            "unique_id": uid.replace(".","~"), 
+            "user_id": self._apikey,
+            "is_active":True
+        }
+        resp = requests.post("https://backend.withsix.co/rate-limit/enquire-has-reached-rate_limit", json=body)
+        if resp.status_code == 200:
+            body =  resp.json()
+            return body["response"]
+        else:
             return False
+
         
     async def _parse_bools(self, string: bytes)-> str:
         '''
@@ -82,7 +82,6 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         timestamp = time.time()
         last_log_sent = self._rate_limit_logs_sent[route]
         if timestamp - last_log_sent > 10:
-            print("called from here")
             requests.post("https://backend.withsix.co/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
                 header=header, 
                 user_id=self._apikey, 
@@ -92,7 +91,8 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                 attack_type="No Rate Limit Attack", 
                 cwe_link="https://cwe.mitre.org/data/definitions/770.html", 
                 status="MITIGATED", 
-                learn_more_link="https://en.wikipedia.org/wiki/Rate_limiting"
+                learn_more_link="https://en.wikipedia.org/wiki/Rate_limiting", 
+                route=route
             ).dict())
             self._rate_limit_logs_sent[route]=timestamp
             
@@ -111,10 +111,11 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         
         #fail safe if there is an internal server error our servers are currenly in maintnance
         try:
-            if time.time() - self._route_last_updated[route] >60:
+            update_time = time.time()
+            if update_time - self._route_last_updated[route] >60:
                 #update rate limit details every 60 seconds
                 rate_limit_resp = requests.get("https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
-                self._route_last_updated[route] = time.time()
+                self._route_last_updated[route] = update_time
                 status_code = rate_limit_resp.status_code
             body = None
 
@@ -150,7 +151,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                                 preferred_id = host
                         
 
-                        if self._is_rate_limit_reached(preferred_id, route): 
+                        if not self._is_rate_limit_reached(preferred_id, route): 
                             _response = await call_next(request)
                             return _response
                         else:
@@ -165,11 +166,9 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                             headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
                             return Response(json.dumps(output), status_code=420, headers=headers)
                     else:
-                       
                         _response = await call_next(request)
                         return _response
                 except Exception as e:
-                    print(e)
                     _response = await call_next(request)
                     return _response
             else:
@@ -177,6 +176,5 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                 _response = await call_next(request)
                 return _response
         except Exception as e:
-            print(e)
             _response = await call_next(request)
             return _response

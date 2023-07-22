@@ -53,3 +53,4 @@ uvicorn
 zipp
 pytz
 python-nmap
+pickleDB

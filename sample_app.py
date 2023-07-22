@@ -34,7 +34,7 @@ origins = ['*']
 class TestSchema(BaseModel):
     user_id: str
 
-PORT = 5001
+PORT = 5002
 
 @app.get("/ope")
 @version(1)
