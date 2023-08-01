@@ -14,6 +14,8 @@ import re
 import requests
 import pickledb
 import ast
+from sixth.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware
+
 
 
 class SixRateLimiterMiddleware(BaseHTTPMiddleware):
@@ -25,7 +27,6 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         self._apikey = apikey
         self._route_last_updated = {}
         self._rate_limit_logs_sent = {}
-        self.db = pickledb.load(f'{apikey}_db.db', auto_dump=True)
         
         for route in fastapi_app.router.routes:
             if type(route.app) == FastAPI:

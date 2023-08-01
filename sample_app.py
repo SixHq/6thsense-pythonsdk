@@ -49,7 +49,7 @@ async def news(request: Request, schema:TestSchema):
 
 @app.post("/users/resend_otp/")
 @version(1)
-async def news():
+async def news(request: Request):
     return {
         "message": "otp sent successfully"
     }

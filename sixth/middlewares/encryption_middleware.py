@@ -1,18 +1,18 @@
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 from starlette.types import ASGIApp, Message
 from fastapi import FastAPI, Request
-from starlette.concurrency import iterate_in_threadpool
 import ast
 from dotenv import load_dotenv
-import os
 import requests
 from sixth.utils import encryption_utils
-import copy
 import json
-from fastapi import Response, Header
-from sixth.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
+from fastapi import Response
+from sixth.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware, _StreamingResponse
 from fastapi import HTTPException
+import time
+from sixth import schemas
+import re
 load_dotenv()
 
 
@@ -21,6 +21,23 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
         super().__init__(app)
         self._app = app
         self._apikey = apikey
+        self._logs_sent = {}
+        self._last_updated = 0
+        self._encryption_enabled = False
+        self._update_encryption_details()
+        
+        for route in fastapi_app.router.routes:
+            if type(route.app) == FastAPI:
+                for new_route in route.app.routes:
+                    path = "/v"+str(route.app.version)+new_route.path
+                    edited_route = re.sub(r'\W+', '~', path)
+                    self._logs_sent[str(edited_route)] = 0
+            else:
+                edited_route = re.sub(r'\W+', '~', route.path)
+                self._logs_sent[str(edited_route)] = 0 
+
+
+
     async def set_body(self, request: Request, body: bytes):
         async def receive() -> Message:
             return {'type': 'http.request', 'body': body}
@@ -36,46 +53,65 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
         out=ast.literal_eval(string)
         return out
     
+    async def _send_logs(self, route: str, header, body, query)-> None:
+        timestamp = time.time()
+        last_log_sent = self._rate_limit_logs_sent[route]
+        if timestamp - last_log_sent > 10:
+            requests.post("https://backend.withsix.co/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
+                header=header, 
+                user_id=self._apikey, 
+                body=str(body), 
+                query_args=str(query), 
+                timestamp=timestamp, 
+                attack_type="Encryption Bypass", 
+                cwe_link="https://cwe.mitre.org/data/definitions/311.html", 
+                status="MITIGATED", 
+                learn_more_link="https://en.wikipedia.org/wiki/Rate_limiting", 
+                route=route
+            ).dict())
+            self._logs_sent[route]=timestamp
+
+    def _update_encryption_details(self):
+        timestamp = time.time()
+        if timestamp - self._last_updated <10:
+            return 
+        response = requests.get(f"https://backend.withsix.co/encryption-service/get-encryption-setting-for-user?user_id={self._apikey}")
+        if response.status_code == 200:
+            self._encryption_enabled = response.json()["enabled"]
+            self._last_updated=timestamp
+        else:
+            self._encryption_enabled=False
 
     async def dispatch(self,request: Request,call_next) -> None:
-
-        req_body = await request.body()
-        await self.set_body(request, req_body)
-        req_body =await self._parse_bools(req_body)
-        private_key_request = requests.post("https://backend.withsix.co/encryption-service/get-user-private_key", data=json.dumps({
-            "apiKey": self._apikey
-        }))
-        if private_key_request.status_code == 200:
-            private_key_url = private_key_request.json()["data"]["private_key"]
-            private_key_txt = requests.get(private_key_url)
-            data = private_key_txt.text
-            if type(req_body) == str:
-                req_body = eval(req_body)
-            output = copy.deepcopy(req_body)
+        self._update_encryption_details()
+        if self._encryption_enabled:
+            route = request.scope["path"]
+            route = re.sub(r'\W+', '~', route)
+            req_body = await request.body()
+            await self.set_body(request, req_body)
+            req_body =await self._parse_bools(req_body)
             try:
-                await encryption_utils.post_order_decrypt(data, None, req_body, output)
+                output = await encryption_utils.post_order_decrypt(req_body["data"])
                 output = json.dumps(output)
                 headers = dict(request.headers)
                 headers["content-length"]= str(len(output.encode()))
             except Exception as e:
-                raise HTTPException(401, {"Unauthorized":e})
-            
+                await self._send_logs(route=route, header=headers, body=req_body, query="")
+                output= {
+                    "data": "UnAuthorized"
+                }
+                headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
+                return Response(json.dumps(output), status_code=401, headers=headers)
+            request._cached_body = output
+            response: Response = await call_next(output)
 
-        response = await call_next(200, output, headers)
-        resp_body = response.body
-        resp_body = await self._parse_bools(resp_body)
-        public_key_request = requests.post("https://backend.withsix.co/encryption-service/get-user-public-key", data=json.dumps({
-            "apiKey": self._apikey
-        }))
-        if public_key_request.status_code == 200:
-            public_key_url = public_key_request.json()["data"]["public_key"]
-            public_key_txt = requests.get(public_key_url)
-            data = public_key_txt.text
-            if type(resp_body) == str:
-                resp_body = eval(resp_body)
-            output = copy.deepcopy(resp_body)
+            # Get the response body content from the custom property
+            response_body = b"".join([part async for part in response.body_iterator])
+            response_body = response_body.decode("utf-8")
             try:
-                await encryption_utils.post_order_encrypt(data, None, resp_body, output)
+                output = {
+                    "data": await encryption_utils.post_order_encrypt(response_body)
+                }
                 output = json.dumps(output)
                 response.headers["content-length"]= str(len(output.encode()))
                 return Response(
@@ -86,4 +122,11 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
                 )
                 
             except Exception as e:
-                raise HTTPException(401, {"Unauthorized":e})
+                output= {
+                    "data": "UnAuthorized"
+                }
+                headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
+                return Response(json.dumps(output), status_code=401, headers=headers)
+        else:
+            _response = await call_next(request)
+            return _response

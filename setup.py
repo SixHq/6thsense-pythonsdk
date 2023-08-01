@@ -4,7 +4,7 @@ from pip._internal.req import parse_requirements
 
 
 
-VERSION = '0.1.7'
+VERSION = '0.1.8'
 DESCRIPTION = 'Sixth offical python package'
 LONG_DESCRIPTION = '''
 # **Sixth**
@@ -145,7 +145,8 @@ setup(
     "uritemplate",
     "urllib3",
     "uvicorn",
-    "zipp"
+    "zipp",
+    "pickleDB"
     ],
     keywords=['python', 'cybersecurity', 'pentesting', 'encryption', 'rate limiting', 'xss prevention'],
     classifiers=[
