@@ -55,7 +55,7 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
     
     async def _send_logs(self, route: str, header, body, query)-> None:
         timestamp = time.time()
-        last_log_sent = self._rate_limit_logs_sent[route]
+        last_log_sent = self._logs_sent[route]
         if timestamp - last_log_sent > 10:
             requests.post("https://backend.withsix.co/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
                 header=header, 
@@ -90,10 +90,10 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
             req_body = await request.body()
             await self.set_body(request, req_body)
             req_body =await self._parse_bools(req_body)
+            headers = dict(request.headers)
             try:
-                output = await encryption_utils.post_order_decrypt(req_body["data"])
+                output = await encryption_utils.post_order_decrypt(req_body)
                 output = json.dumps(output)
-                headers = dict(request.headers)
                 headers["content-length"]= str(len(output.encode()))
             except Exception as e:
                 await self._send_logs(route=route, header=headers, body=req_body, query="")

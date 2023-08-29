@@ -4,15 +4,12 @@ from starlette.datastructures import Headers, MutableHeaders
 from starlette.responses import PlainTextResponse, Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from fastapi import FastAPI,Depends,Response,HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware import Middleware
 from starlette.datastructures import MutableHeaders
 import time
 import json
 from sixth import schemas
 import re
 import requests
-import pickledb
 import ast
 from sixth.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware
 
@@ -101,13 +98,14 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         
     async def dispatch(self,request: Request,call_next) -> None:
         host = request.client.host
+        
         route = request.scope["path"]
         route = re.sub(r'\W+', '~', route)
         headers = request.headers
         query_params = request.query_params
         rate_limit_resp = None
         status_code = 200
-
+       
         
         
         #fail safe if there is an internal server error our servers are currenly in maintnance
@@ -126,7 +124,6 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                 body = await self._parse_bools(body)
             except:
                 pass
-            
             if status_code == 200: 
                 try:
                     rate_limit = schemas.RateLimiter.model_validate(rate_limit_resp.json()) if rate_limit_resp != None else self._config.rate_limiter[route]

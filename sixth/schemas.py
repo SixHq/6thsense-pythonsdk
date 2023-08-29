@@ -49,3 +49,14 @@ class SlackMessageSchema(BaseModel):
     status: str 
     learn_more_link: str    
     route: str
+
+class SecureLogMessage(BaseModel):
+    id: Optional[str]=None
+    user_id: Optional[str]=None
+    type: Optional[str]=None
+    value: Optional[str]=None
+    route: Optional[str]=None
+    headers: Optional[dict]=None 
+    body:object
+    query_args: object = None
+    timestamp: float

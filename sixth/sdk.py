@@ -1,7 +1,7 @@
 from fastapi import FastAPI, status, Depends
 from sixth.middlewares.six_rate_limiter_middleware import SixRateLimiterMiddleware
 from sixth.middlewares.encryption_middleware import EncryptionMiddleware
-from sixth.middlewares.six_independent_rate_limiter import SixRateIndependentLimiterMiddleware
+from sixth.middlewares.six_secure_logs_rate_limiter import SixSecureLogsMiddleware
 import requests
 from dotenv import load_dotenv
 from sixth import schemas
@@ -31,14 +31,25 @@ class Sixth():
                 _config = self._sync_project_route()
         except ValidationError as e:
             _config = self._sync_project_route()
-
+        
+        self._config_secure_log()
         if (_config.encryption_enabled):
+            pass
             self._app.add_middleware(EncryptionMiddleware, apikey= self._apikey, fastapi_app= self._app)
             self._app.add_middleware(SixRateLimiterMiddleware, apikey= self._apikey, fastapi_app= self._app, project_config=_config)
         else:
             self._app.add_middleware(SixRateLimiterMiddleware, apikey= self._apikey, fastapi_app= self._app, project_config=_config)
+            pass
          
         
+    def _config_secure_log(self):
+        url = "https://backend.withsix.co/secure-monitoring/get-all-secure-log?apikey="+self._apikey
+        secure_log_resp = requests.get(url)
+        secure_log_resp_body = secure_log_resp.json()
+        secure_log_resp_data = secure_log_resp_body["data"]
+        self._app.add_middleware(SixSecureLogsMiddleware, apikey= self._apikey, fastapi_app= self._app, secure_logs=secure_log_resp_data)
+
+
     def _sync_project_route(self, config: schemas.ProjectConfig = None)-> schemas.ProjectConfig:
         #sync the config with db
         _rl_configs = {}
