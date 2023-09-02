@@ -45,7 +45,9 @@ async def send_otp(request: Request):
     return {
         "data": {
             "message": [1, 2, 3, 4, 5], 
-            "new": "ope"
+            "new": "ope",
+            "logs": "Testing",
+            "for": {"ope":"is here"}
         }
     }
 
@@ -53,7 +55,7 @@ async def send_otp(request: Request):
 @version(1)
 async def send_otp(request: Request):
     return {
-        "message": "otp sent successfully"
+        "message": "ope"
     }
 
 @app.get("/users/verify/")

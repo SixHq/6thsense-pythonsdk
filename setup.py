@@ -4,7 +4,7 @@ from pip._internal.req import parse_requirements
 
 
 
-VERSION = '0.1.8'
+VERSION = '0.1.9'
 DESCRIPTION = 'Sixth offical python package'
 LONG_DESCRIPTION = '''
 # **Sixth**
@@ -93,7 +93,8 @@ setup(
     long_description_content_type="text/markdown",
     long_description=LONG_DESCRIPTION,
     packages=find_packages(),
-    install_requires=["anyio",
+    install_requires=[
+    "anyio",
     "CacheControl",
     "cachetools",
     "certifi",

@@ -49,11 +49,11 @@ class SixSecureLogsMiddleware(BaseHTTPMiddleware):
         out=ast.literal_eval(string)
         return out
     
-    async def _send_logs(self, route: str, header, body, query, value, type)-> None:
+    async def _send_logs(self, route: str, header, body, query, value, type, ids)-> None:
         timestamp = time.time()
         last_log_sent = self._logs_sent[route]
         if timestamp - last_log_sent > 5:
-            requests.post("https://backend.withsix.co/slack/send_secure_log_to_slack_user", json=schemas.SecureLogMessage(
+            requests.post("http://127.0.0.1:8000/slack/send_secure_log_to_slack_user", json=schemas.SecureLogMessage(
                 header=header, 
                 user_id=self._apikey, 
                 body=str(body), 
@@ -62,13 +62,14 @@ class SixSecureLogsMiddleware(BaseHTTPMiddleware):
                 route=route, 
                 value=value, 
                 type=type,
+                id=ids
             ).dict())
             self._logs_sent[route]=timestamp
 
     async def _config_secure_log(self):
         update_time = time.time()
         if update_time - self._last_updated_logs_config >10:
-            url = "https://backend.withsix.co/secure-monitoring/get-all-secure-log?apikey="+self._apikey
+            url = "http://127.0.0.1:8000/secure-monitoring/get-all-secure-log?apikey="+self._apikey
             secure_log_resp = requests.get(url)
             secure_log_resp_body = secure_log_resp.json()
             secure_log_resp_data = secure_log_resp_body["data"]
@@ -89,43 +90,48 @@ class SixSecureLogsMiddleware(BaseHTTPMiddleware):
 
 
     async def dispatch(self,request: Request,call_next) -> None:
-        await self._config_secure_log()
-        route = request.scope["path"]
-        route = re.sub(r'\W+', '~', route)
-        headers = request.headers
-        query_params = request.query_params
-        body = None
-        
         try:
-            body = await request.body()
-            await self.set_body(request, body)
-            body = await self._parse_bools(body)
-        except:
-            pass
-        secure_log: schemas.SecureLog = None 
-        for log in self._secure_logs:
-            if log.get("route", "") == route:
-                secure_log = log
+            await self._config_secure_log()
+            route = request.scope["path"]
+            route = re.sub(r'\W+', '~', route)
+            headers = request.headers
+            query_params = request.query_params
+            body = None
+            
+            try:
+                body = await request.body()
+                await self.set_body(request, body)
+                body = await self._parse_bools(body)
+            except:
+                pass
+            secure_log: List[dict] = [] 
 
-        _response = await call_next(request)
+            for log in self._secure_logs:
+                if log.get("route", "") == route or log.get("route", "")=="all":
+                    secure_log.append(log)
+            _response = await call_next(request)
+            
+            if len(secure_log) == 0:
+                return _response
+            response_body = b"".join([part async for part in _response.body_iterator])
+            response_body = response_body.decode("utf-8")
         
-        if secure_log == None or secure_log["is_active"] == False:
+            for log in secure_log:
+                #special instances to carter for dictionary and list
+                if log["type"] != "dict" and log["type"] != "list":
+                    # Get the response body content from the custom property
+                    if log["value"] in response_body or log["value"] in _response.headers.values():
+                        await self._send_logs(route, headers, body, query_params, log["value"], log["type"], log["id"])
+                else:
+                    modified_body = response_body.replace("'",'"').replace(" ", "")
+                    modified_value = str(log["value"]).replace("'", '"').replace(" ", "")
+
+                    if modified_value in modified_body or modified_value in _response.headers.values():
+                        await self._send_logs(route, headers, body, query_params, log["value"], log["type"], log["id"])
+
+            output = response_body
+            headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
+            return Response(output, status_code=200, headers=headers)
+        except Exception as e:
+            _response = await call_next(request)
             return _response
-        response_body = b"".join([part async for part in _response.body_iterator])
-        response_body = response_body.decode("utf-8")
-       
-        #special instances to carter for dictionary and list
-        if secure_log["type"] != "dict" and secure_log["type"] != "list":
-            # Get the response body content from the custom property
-            if secure_log["value"] in response_body or secure_log["value"] in _response.headers.values():
-                await self._send_logs(route, headers, body, query_params, secure_log["value"], secure_log["type"])
-        else:
-            modified_body = response_body.replace("'",'"').replace(" ", "")
-            modified_value = str(secure_log["value"]).replace("'", '"').replace(" ", "")
-
-            if modified_value in modified_body or modified_value in _response.headers.values():
-                await self._send_logs(route, headers, body, query_params, secure_log["value"], secure_log["type"])
-
-        output = response_body
-        headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
-        return Response(output, status_code=200, headers=headers)
