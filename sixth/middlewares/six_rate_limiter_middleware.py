@@ -55,7 +55,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
             "user_id": self._apikey,
             "is_active":True
         }
-        resp = requests.post("http://127.0.0.1:8000/rate-limit/enquire-has-reached-rate_limit", json=body)
+        resp = requests.post("https://backend.withsix.co/rate-limit/enquire-has-reached-rate_limit", json=body)
         if resp.status_code == 200:
             body =  resp.json()
             return body["response"]
@@ -80,7 +80,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         timestamp = time.time()
         last_log_sent = self._rate_limit_logs_sent[route]
         if timestamp - last_log_sent > 10:
-            requests.post("http://127.0.0.1:8000/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
+            requests.post("https://backend.withsix.co/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
                 header=header, 
                 user_id=self._apikey, 
                 body=str(body), 
@@ -113,7 +113,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
             update_time = time.time()
             if update_time - self._route_last_updated[route] >60:
                 #update rate limit details every 60 seconds
-                rate_limit_resp = requests.get("http://127.0.0.1:8000/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
+                rate_limit_resp = requests.get("https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
                 self._route_last_updated[route] = update_time
                 status_code = rate_limit_resp.status_code
             body = None

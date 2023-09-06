@@ -20,7 +20,7 @@ class Sixth():
         self._app = app 
 
     def init(self):
-        _base_url = "http://127.0.0.1:8000"
+        _base_url = "https://backend.withsix.co"
         _project_config_resp = requests.get(_base_url+"/project-config/config/"+self._apikey)
         # get the user's project config
         try:
@@ -43,7 +43,7 @@ class Sixth():
          
         
     def _config_secure_log(self):
-        url = "http://127.0.0.1:8000/secure-monitoring/get-all-secure-log?apikey="+self._apikey
+        url = "https://backend.withsix.co/secure-monitoring/get-all-secure-log?apikey="+self._apikey
         secure_log_resp = requests.get(url)
         secure_log_resp_body = secure_log_resp.json()
         secure_log_resp_data = secure_log_resp_body["data"]
@@ -85,7 +85,7 @@ class Sixth():
             encryption_enabled=config.encryption_enabled if config != None else False, 
             rate_limiter_enabled=config.rate_limiter_enabled if config != None else True
         )
-        _base_url = "http://127.0.0.1:8000"
+        _base_url = "https://backend.withsix.co"
         _project_config_resp = requests.post(_base_url+"/project-config/config/sync-user-config", json=_config.dict())
         if _project_config_resp.status_code == status.HTTP_200_OK:
             return _config
