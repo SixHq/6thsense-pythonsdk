@@ -13,6 +13,7 @@ class RateLimiter(BaseModel):
     created_at: float
     rate_limit_type: str = "ip address" #ip address, header, body, query_param
     unique_id: str = "host"
+    rate_limit_by_rules:Optional[Dict]
     error_payload: Dict[str , dict] = {
         error_payload_id:{
             "message": "max_limit_request_reached", 

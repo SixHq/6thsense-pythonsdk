@@ -147,6 +147,20 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                                 preferred_id = query_params[preferred_id]
                             else:
                                 preferred_id = host
+
+                        for key in rate_limit.rate_limit_by_rules:
+                            if key == "body":
+                                if body != None:
+                                    preferred_id = body[preferred_id]
+                                else:
+                                    _response = await call_next(request)
+                                    return _response
+                            elif key == "header":
+                                preferred_id = headers[preferred_id]
+                            elif key == "args":
+                                preferred_id = query_params[preferred_id]
+                            else:
+                                preferred_id = host
                         
 
                         if not self._is_rate_limit_reached(preferred_id, route): 
