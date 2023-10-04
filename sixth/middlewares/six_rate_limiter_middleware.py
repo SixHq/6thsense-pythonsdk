@@ -44,7 +44,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
             return {'type': 'http.request', 'body': body}
         request._receive = receive
         
-    def _is_rate_limit_reached(self, uid, route):
+    def _is_rate_limit_reached(self, uid,rules, route):
         rate_limit = self._config.rate_limiter[route].rate_limit
         interval = self._config.rate_limiter[route].interval
         body = {
@@ -130,53 +130,63 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                     if rate_limit.is_active:
                         self._config.rate_limiter[route] = rate_limit
                         preferred_id = self._config.rate_limiter[route].unique_id
+                        rules_object={}
                     
                         if preferred_id == "" or preferred_id=="host":
                             preferred_id = host
+                            
+                            
                             
                         else:
                             if rate_limit.rate_limit_type == "body":
                                 if body != None:
                                     preferred_id = body[preferred_id]
+                                    
                                 else:
-                                    _response = await call_next(request)
-                                    return _response
+                                    pass
                             elif rate_limit.rate_limit_type == "header":
                                 preferred_id = headers[preferred_id]
+                                
                             elif rate_limit.rate_limit_type == "args":
                                 preferred_id = query_params[preferred_id]
+                                
                             else:
                                 preferred_id = host
+                        rules_object["default"]=preferred_id
 
                         for key in rate_limit.rate_limit_by_rules:
                             if key == "body":
                                 if body != None:
-                                    preferred_id = body[preferred_id]
+                                    rules_object["body"] = body[rate_limit.rate_limit_by_rules["body"]]
                                 else:
-                                    _response = await call_next(request)
-                                    return _response
+                                    pass
                             elif key == "header":
-                                preferred_id = headers[preferred_id]
+                                rules_object["headers"] = headers[rate_limit.rate_limit_by_rules["headers"]]
                             elif key == "args":
-                                preferred_id = query_params[preferred_id]
-                            else:
-                                preferred_id = host
+                                rules_object["args"] = query_params[rate_limit.rate_limit_by_rules["args"]]
+                            
                         
 
-                        if not self._is_rate_limit_reached(preferred_id, route): 
-                            _response = await call_next(request)
-                            return _response
-                        else:
-                            await self._send_logs(route=route, header=headers, body=body, query=query_params)
-                            temp_payload = rate_limit.error_payload.values()
-                            final = {}
-                            for c in temp_payload:
-                                for keys in c:
+                        for key in rules_object:
+                            if self._is_rate_limit_reached(rules_object[key], route): 
+                               await self._send_logs(route=route, header=headers, body=body, query=query_params)
+                               temp_payload = rate_limit.error_payload.values()
+                               final = {}
+                               for c in temp_payload:
+                                   for keys in c:
                                     if keys != "uid":
                                         final[keys] = c[keys]
-                            output= final
-                            headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
-                            return Response(json.dumps(output), status_code=420, headers=headers)
+                                            
+                               output= final
+                               headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
+                               return Response(json.dumps(output), status_code=420, headers=headers)
+    
+
+                            else:
+                                pass
+                        _response = await call_next(request)
+                        return _response
+                                
                     else:
                         _response = await call_next(request)
                         return _response
