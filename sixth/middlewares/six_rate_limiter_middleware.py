@@ -44,7 +44,8 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
             return {'type': 'http.request', 'body': body}
         request._receive = receive
         
-    def _is_rate_limit_reached(self, uid,rules, route):
+    def _is_rate_limit_reached(self, uid, route):
+        print("called  from here")
         rate_limit = self._config.rate_limiter[route].rate_limit
         interval = self._config.rate_limiter[route].interval
         body = {
@@ -57,9 +58,11 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         }
         resp = requests.post("https://backend.withsix.co/rate-limit/enquire-has-reached-rate_limit", json=body)
         if resp.status_code == 200:
+            print(" id ", uid, " response ", resp.json())
             body =  resp.json()
             return body["response"]
         else:
+            print(" From here bad timeing", resp.status_code)
             return False
 
         
@@ -114,6 +117,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
             if update_time - self._route_last_updated[route] >60:
                 #update rate limit details every 60 seconds
                 rate_limit_resp = requests.get("https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
+                print(rate_limit_resp)
                 self._route_last_updated[route] = update_time
                 status_code = rate_limit_resp.status_code
             body = None
@@ -166,9 +170,10 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                                 rules_object["args"] = query_params[rate_limit.rate_limit_by_rules["args"]]
                             
                         
-
+                        prev_rate_limit_res = False
                         for key in rules_object:
-                            if self._is_rate_limit_reached(rules_object[key], route): 
+                            rate_limit_rule_exceeded = self._is_rate_limit_reached(rules_object[key], route)
+                            if prev_rate_limit_res and rate_limit_rule_exceeded: 
                                await self._send_logs(route=route, header=headers, body=body, query=query_params)
                                temp_payload = rate_limit.error_payload.values()
                                final = {}
@@ -180,10 +185,9 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                                output= final
                                headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
                                return Response(json.dumps(output), status_code=420, headers=headers)
-    
-
                             else:
                                 pass
+                            prev_rate_limit_res = rate_limit_rule_exceeded
                         _response = await call_next(request)
                         return _response
                                 
@@ -191,6 +195,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                         _response = await call_next(request)
                         return _response
                 except Exception as e:
+                    print("1 2 ", e)
                     _response = await call_next(request)
                     return _response
             else:
@@ -198,5 +203,6 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                 _response = await call_next(request)
                 return _response
         except Exception as e:
+            print("erorr is ", e)
             _response = await call_next(request)
             return _response
