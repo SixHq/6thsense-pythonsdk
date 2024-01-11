@@ -4,7 +4,7 @@ from pip._internal.req import parse_requirements
 
 
 
-VERSION = '0.2.4'
+VERSION = '0.2.6.2'
 DESCRIPTION = 'Sixth offical python package'
 LONG_DESCRIPTION = '''
 # **Sixth**
@@ -149,7 +149,7 @@ setup(
     "pycparser",
     "pycryptodome",
     "pycryptodomex",
-    "pydantic",
+    "pydantic==1.10.9",
     "pydantic_core",
     "Pygments",
     "PyJWT",
