@@ -12,6 +12,7 @@ import re
 import requests
 import ast
 from sixth.middlewares.six_base_http_middleware import SixBaseHTTPMiddleware
+from sixth.utils.gen import bytes_to_string
 
 
 
@@ -24,6 +25,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         self._apikey = apikey
         self._route_last_updated = {}
         self._rate_limit_logs_sent = {}
+        
         
         for route in fastapi_app.router.routes:
             if type(route.app) == FastAPI:
@@ -80,7 +82,7 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         timestamp = time.time()
         last_log_sent = self._rate_limit_logs_sent[route]
         if timestamp - last_log_sent > 10:
-            requests.post("https://backend.withsix.co/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
+            requests.post(" https://backend.withsix.co/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
                 header=header, 
                 user_id=self._apikey, 
                 body=str(body), 
@@ -97,7 +99,11 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
 
         
     async def dispatch(self,request: Request,call_next) -> None:
-        host = request.client.host
+        host = ""
+        try:
+            host = request.client.host
+        except: 
+            pass
         
         route = request.scope["path"]
         route = re.sub(r'\W+', '~', route)
@@ -111,48 +117,72 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
         #fail safe if there is an internal server error our servers are currenly in maintnance
         try:
             update_time = time.time()
-            if update_time - self._route_last_updated[route] >60:
+            if update_time - self._route_last_updated[route] >10:
                 #update rate limit details every 60 seconds
-                rate_limit_resp = requests.get("https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
+                rate_limit_resp = requests.get(" https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
                 self._route_last_updated[route] = update_time
                 status_code = rate_limit_resp.status_code
-            body = None
 
+            body = None
+            
             try:
                 body = await request.body()
                 await self.set_body(request, body)
                 body = await self._parse_bools(body)
-            except:
+            except Exception as e:
                 pass
             if status_code == 200: 
                 try:
-                    rate_limit = schemas.RateLimiter.model_validate(rate_limit_resp.json()) if rate_limit_resp != None else self._config.rate_limiter[route]
+                    rate_limit = schemas.RateLimiter.parse_obj(rate_limit_resp.json()) if rate_limit_resp != None else self._config.rate_limiter[route]
                     if rate_limit.is_active:
                         self._config.rate_limiter[route] = rate_limit
                         preferred_id = self._config.rate_limiter[route].unique_id
+                        rules_object={}
                     
                         if preferred_id == "" or preferred_id=="host":
                             preferred_id = host
                             
+                            
+                            
                         else:
                             if rate_limit.rate_limit_type == "body":
-                                if body != None:
+                                if (type(body) == bytes):
+                                    body = bytes_to_string(body)
+                                    print("Body is ", body)
+                                if body != None or body:
                                     preferred_id = body[preferred_id]
+                                    
                                 else:
-                                    _response = await call_next(request)
-                                    return _response
+                                    pass
                             elif rate_limit.rate_limit_type == "header":
                                 preferred_id = headers[preferred_id]
+                                
                             elif rate_limit.rate_limit_type == "args":
                                 preferred_id = query_params[preferred_id]
+                                
                             else:
                                 preferred_id = host
+                        rules_object["default"]=preferred_id
+                        if rate_limit.rate_limit_by_rules:
+                            for key in rate_limit.rate_limit_by_rules:
+                                if key == "body":
+                                    if body != None:
+                                        rules_object["body"] = body[rate_limit.rate_limit_by_rules["body"]]
+                                    else:
+                                        pass
+                                elif key == "header":
+                                    rules_object["headers"] = headers[rate_limit.rate_limit_by_rules["headers"]]
+                                elif key == "args":
+                                    rules_object["args"] = query_params[rate_limit.rate_limit_by_rules["args"]]
+                                
                         
+                        prev_rate_limit_res = False
+                        final_rule = ""
+                        for key in rules_object:
+                            final_rule += rules_object[key]
 
-                        if not self._is_rate_limit_reached(preferred_id, route): 
-                            _response = await call_next(request)
-                            return _response
-                        else:
+
+                        if self._is_rate_limit_reached(final_rule, route): 
                             await self._send_logs(route=route, header=headers, body=body, query=query_params)
                             temp_payload = rate_limit.error_payload.values()
                             final = {}
@@ -160,13 +190,20 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                                 for keys in c:
                                     if keys != "uid":
                                         final[keys] = c[keys]
+                                        
                             output= final
                             headers = MutableHeaders(headers={"content-length": str(len(str(output).encode())), 'content-type': 'application/json'})
                             return Response(json.dumps(output), status_code=420, headers=headers)
+                        else:
+                            pass
+                        _response = await call_next(request)
+                        return _response
+                                
                     else:
                         _response = await call_next(request)
                         return _response
                 except Exception as e:
+                    print("Error is ", e)
                     _response = await call_next(request)
                     return _response
             else:
@@ -174,5 +211,6 @@ class SixRateLimiterMiddleware(BaseHTTPMiddleware):
                 _response = await call_next(request)
                 return _response
         except Exception as e:
+            print("Error is ", e)
             _response = await call_next(request)
             return _response

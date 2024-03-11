@@ -57,7 +57,7 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
         timestamp = time.time()
         last_log_sent = self._logs_sent[route]
         if timestamp - last_log_sent > 10:
-            requests.post("https://backend.withsix.co/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
+            requests.post("  https://backend.withsix.co/slack/send_message_to_slack_user", json=schemas.SlackMessageSchema(
                 header=header, 
                 user_id=self._apikey, 
                 body=str(body), 
@@ -75,7 +75,7 @@ class EncryptionMiddleware(SixBaseHTTPMiddleware):
         timestamp = time.time()
         if timestamp - self._last_updated <10:
             return 
-        response = requests.get(f"https://backend.withsix.co/encryption-service/get-encryption-setting-for-user?user_id={self._apikey}")
+        response = requests.get(f"  https://backend.withsix.co/encryption-service/get-encryption-setting-for-user?user_id={self._apikey}")
         if response.status_code == 200:
             self._encryption_enabled = response.json()["enabled"]
             self._last_updated=timestamp

@@ -53,7 +53,7 @@ class SixSecureLogsMiddleware(BaseHTTPMiddleware):
         timestamp = time.time()
         last_log_sent = self._logs_sent[route]
         if timestamp - last_log_sent > 5:
-            requests.post("https://backend.withsix.co/slack/send_secure_log_to_slack_user", json=schemas.SecureLogMessage(
+            requests.post("  https://backend.withsix.co/slack/send_secure_log_to_slack_user", json=schemas.SecureLogMessage(
                 header=header, 
                 user_id=self._apikey, 
                 body=str(body), 
@@ -69,7 +69,7 @@ class SixSecureLogsMiddleware(BaseHTTPMiddleware):
     async def _config_secure_log(self):
         update_time = time.time()
         if update_time - self._last_updated_logs_config >10:
-            url = "https://backend.withsix.co/secure-monitoring/get-all-secure-log?apikey="+self._apikey
+            url = "  https://backend.withsix.co/secure-monitoring/get-all-secure-log?apikey="+self._apikey
             secure_log_resp = requests.get(url)
             secure_log_resp_body = secure_log_resp.json()
             secure_log_resp_data = secure_log_resp_body["data"]
