@@ -61,7 +61,7 @@ class SixRateIndependentLimiterMiddleware(BaseHTTPMiddleware):
         host = request.client.host
         route = request.scope["path"]
         route = re.sub(r'\W+', '~', route)
-        rate_limit_resp = requests.get(" https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
+        rate_limit_resp = requests.get("  https://backend.withsix.co/project-config/config/get-route-rate-limit/"+self._apikey+"/"+route)
         body = await request.body()
         await self.set_body(request, body)
         body = await self._parse_bools(body)

@@ -13,7 +13,6 @@ from pydantic.error_wrappers import ValidationError
 
 load_dotenv()
 
-
 class Sixth():
     def __init__(self, apikey: str, app: FastAPI):
         self._apikey = apikey
@@ -43,9 +42,10 @@ class Sixth():
          
         
     def _config_secure_log(self):
-        url = " https://backend.withsix.co/secure-monitoring/get-all-secure-log?apikey="+self._apikey
+        url = "  https://backend.withsix.co/secure-monitoring/get-all-secure-log?apikey="+self._apikey
         secure_log_resp = requests.get(url)
         secure_log_resp_body = secure_log_resp.json()
+        print("Secure Log response is ", secure_log_resp_body)
         secure_log_resp_data = secure_log_resp_body["data"]
         self._app.add_middleware(SixSecureLogsMiddleware, apikey= self._apikey, fastapi_app= self._app, secure_logs=secure_log_resp_data)
 
@@ -85,7 +85,7 @@ class Sixth():
             encryption_enabled=config.encryption_enabled if config != None else False, 
             rate_limiter_enabled=config.rate_limiter_enabled if config != None else True
         )
-        _base_url = " https://backend.withsix.co"
+        _base_url = "https://backend.withsix.co"
         _project_config_resp = requests.post(_base_url+"/project-config/config/sync-user-config", json=_config.dict())
         if _project_config_resp.status_code == status.HTTP_200_OK:
             return _config

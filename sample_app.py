@@ -74,9 +74,17 @@ async def verify_otp(email: str, otp: str):
         }
     
 
-@app.get("/itemss/{item_id}")
-def read_item(item_id: int):
+@app.get("/itemss")
+def read_item(item_id: int, new: str):
     return {"item_id": item_id}
+
+
+@app.get("/itemssenwss")
+def read_item(item_id: int, new: str):
+    return {"item_id": item_id}
+
+
+
 
 @app.get("/newsss_items/{item_id}")
 def read_item(item_id: int):
@@ -88,6 +96,6 @@ def read_item(item_id: int):
     return {"item_id": item_id}
 
 app = version_app(app=app)
-Sixth("m0KtobeWLZWo7pHhGxaWYqioYQC3", app).init()
+Sixth("mails", app).init()
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=PORT)
